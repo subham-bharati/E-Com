@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../services/api';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Tab navigation: 'analytics' | 'catalog' | 'orders' | 'add-product'
+  // Tab navigation: 'analytics' | 'catalog' | 'orders' | 'add-product' | 'users'
   const [activeTab, setActiveTab] = useState('analytics');
+
+  // Users state (for user role management)
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   // Products state (for catalog tab)
   const [products, setProducts] = useState([]);
@@ -87,11 +92,46 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  const fetchUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const response = await API.get('/api/admin/users');
+      setUsers(response.data);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAnalytics();
     fetchProducts();
     fetchOrders();
-  }, [fetchAnalytics, fetchProducts, fetchOrders]);
+    fetchUsers();
+  }, [fetchAnalytics, fetchProducts, fetchOrders, fetchUsers]);
+
+  useEffect(() => {
+    if (location.pathname === '/admin/users') {
+      setActiveTab('users');
+    }
+  }, [location.pathname]);
+
+  const handleUpdateUserRole = async (userId, newRole) => {
+    setActionLoading(true);
+    try {
+      await API.put(`/api/admin/users/${userId}/role`, { role: newRole }, {
+        params: { role: newRole }
+      });
+      alert('User role updated successfully!');
+      fetchUsers();
+    } catch (err) {
+      console.error('Failed to update user role:', err);
+      alert(err.response?.data?.error || 'Failed to update user role.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Actions
   const handleFormChange = (e) => {
@@ -234,6 +274,7 @@ export default function AdminDashboard() {
             { id: 'catalog', label: 'Manage Catalog' },
             { id: 'orders', label: 'Orders Fulfillment' },
             { id: 'add-product', label: 'Add New Product' },
+            { id: 'users', label: 'User Roles (RBAC)' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -622,6 +663,73 @@ export default function AdminDashboard() {
                 </button>
               </form>
             </div>
+          </div>
+        )}
+
+        {/* TAB 5: USER ROLE MANAGEMENT (RBAC) */}
+        {activeTab === 'users' && (
+          <div className="space-y-6 animate-slide-up">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-text-primary">Enterprise Role-Based Access Control (RBAC)</h2>
+              <button
+                onClick={fetchUsers}
+                className="px-4 py-2 bg-surface-input border border-border hover:border-primary/50 rounded-xl text-xs font-semibold text-text-primary transition-all cursor-pointer"
+              >
+                Refresh Users
+              </button>
+            </div>
+
+            {usersLoading ? (
+              <div className="py-20 flex justify-center">
+                <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : users.length === 0 ? (
+              <div className="bg-surface-card border border-border p-12 text-center rounded-2xl">
+                <p className="text-text-secondary text-base">No registered users found inside database.</p>
+              </div>
+            ) : (
+              <div className="bg-surface-card border border-border rounded-2xl overflow-hidden shadow-xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-border bg-surface text-text-muted text-xs uppercase font-bold tracking-wider">
+                        <th className="px-6 py-4">User ID</th>
+                        <th className="px-6 py-4">Username</th>
+                        <th className="px-6 py-4">Email Address</th>
+                        <th className="px-6 py-4 text-right">Administrative Role</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border text-sm">
+                      {users.map((u) => (
+                        <tr key={u.id} className="hover:bg-surface/30 transition-colors">
+                          <td className="px-6 py-4 text-text-secondary font-mono">#{u.id}</td>
+                          <td className="px-6 py-4">
+                            <span className="font-bold text-text-primary">{u.username}</span>
+                          </td>
+                          <td className="px-6 py-4 text-text-secondary">
+                            {u.email}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <select
+                              value={u.role}
+                              onChange={(e) => handleUpdateUserRole(u.id, e.target.value)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold border border-border bg-surface-input text-text-primary cursor-pointer transition-colors focus:border-primary ${
+                                u.role === 'ROLE_ADMIN'
+                                  ? 'text-primary border-primary/30 bg-primary/5'
+                                  : 'text-text-secondary border-border bg-surface'
+                              }`}
+                            >
+                              <option value="ROLE_USER">USER</option>
+                              <option value="ROLE_ADMIN">ADMIN</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

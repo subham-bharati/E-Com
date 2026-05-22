@@ -85,6 +85,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/admin/users"
+        element={
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
+        }
+      />
+      <Route
         path="/product/:id"
         element={
           <ProtectedRoute>

@@ -38,6 +38,12 @@ public class Product {
     @Column(columnDefinition = "LONGTEXT")
     private String imageUrl;
 
+    @Column(nullable = true)
+    private String category;
+
+    @Column(nullable = true)
+    private Double rating;
+
     public Product() {
     }
 
@@ -47,6 +53,16 @@ public class Product {
         this.price = price;
         this.stockQuantity = stockQuantity;
         this.imageUrl = imageUrl;
+    }
+
+    public Product(String name, String description, BigDecimal price, Integer stockQuantity, String imageUrl, String category, Double rating) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.stockQuantity = stockQuantity;
+        this.imageUrl = imageUrl;
+        this.category = category;
+        this.rating = rating;
     }
 
     public Long getId() {
@@ -95,5 +111,21 @@ public class Product {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public Double getRating() {
+        return rating;
+    }
+
+    public void setRating(Double rating) {
+        this.rating = rating;
     }
 }
