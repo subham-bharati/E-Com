@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import API from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -7,6 +8,13 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Trigger background ping to wake up the Railway backend if it is asleep
+  useEffect(() => {
+    API.get('/api/products?size=1')
+      .then(() => console.log('Backend wake-up ping completed successfully.'))
+      .catch((err) => console.warn('Backend wake-up ping initiated:', err.message));
+  }, []);
 
   // On mount, rehydrate auth state from localStorage
   useEffect(() => {
